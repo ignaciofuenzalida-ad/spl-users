@@ -34,7 +34,7 @@ func NewUserDelayedCron(lc fx.Lifecycle) *CronJob {
 }
 
 func RegisterUserDelayedCronJobs(c *CronJob) {
-	_, err := c.cron.AddFunc("*/2 * * * *", func() {
+	_, err := c.cron.AddFunc("*/5 * * * *", func() {
 		c.CheckDelayedUsers = true
 	})
 	if err != nil {

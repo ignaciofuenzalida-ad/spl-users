@@ -42,9 +42,10 @@ func (q *QueueService) Run() {
 			fmt.Printf("Queue is below limit: %d, fetching more random users...\n", totalElements)
 			runs, err := q.userRepository.GetRandomUsers(q.config.DefaultRandomUsersQueueSize)
 			if err != nil {
-				fmt.Println(err)
+				fmt.Printf("Error during RandomUsersQueue: %s\n", err)
 			} else {
 				q.runsQueue.PushMany(runs)
+				fmt.Printf("Queue updated, total elements: %d \n", totalElements)
 			}
 		}
 
@@ -52,7 +53,7 @@ func (q *QueueService) Run() {
 		if len(q.userUpdateQueue.Values) > 0 {
 			err := q.UpdateOrCreateUser()
 			if err != nil {
-				fmt.Println(err)
+				fmt.Printf("Error during UsersQueue: %s\n", err)
 			}
 		}
 
@@ -60,7 +61,7 @@ func (q *QueueService) Run() {
 		if q.cronJob.CheckDelayedUsers {
 			affected, err := q.userRepository.UpdateDelayedUsers()
 			if err != nil {
-				fmt.Println(err)
+				fmt.Printf("Error during Delayed Users: %s\n", err)
 			} else {
 				fmt.Printf("Users with delayed PENDING: %d, status updated to WAITING.\n", affected)
 				q.cronJob.CheckDelayedUsers = false
