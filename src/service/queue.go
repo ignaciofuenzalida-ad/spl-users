@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"spl-users/ent/schema"
 	"spl-users/src/config"
+	"spl-users/src/cronjob"
 	"spl-users/src/dto"
 	"spl-users/src/queue"
 	"spl-users/src/repository"
@@ -14,6 +15,7 @@ type QueueService struct {
 	config          *config.EnvironmentConfig
 	runsQueue       *queue.Queue[string]
 	userUpdateQueue *queue.Queue[dto.UpdateUserDto]
+	cronJob         *cronjob.CronJob
 }
 
 func NewQueueService(
@@ -21,12 +23,14 @@ func NewQueueService(
 	config *config.EnvironmentConfig,
 	runsQueue *queue.Queue[string],
 	userUpdateQueue *queue.Queue[dto.UpdateUserDto],
+	cronJob *cronjob.CronJob,
 ) *QueueService {
 	return &QueueService{
 		userRepository:  userRepository,
 		config:          config,
 		runsQueue:       runsQueue,
 		userUpdateQueue: userUpdateQueue,
+		cronJob:         cronJob,
 	}
 }
 
@@ -34,7 +38,7 @@ func (q *QueueService) Run() {
 	for {
 		// RunsQueue
 		totalElements := len(q.runsQueue.Values)
-		if totalElements <= q.config.DefaultRandomUsersQueueSize {
+		if totalElements < q.config.DefaultRandomUsersQueueSize {
 			fmt.Printf("Queue is below limit: %d, fetching more random users...\n", totalElements)
 			runs, err := q.userRepository.GetRandomUsers(q.config.DefaultRandomUsersQueueSize)
 			if err != nil {
@@ -51,6 +55,18 @@ func (q *QueueService) Run() {
 				fmt.Println(err)
 			}
 		}
+
+		// Delayed Users
+		if q.cronJob.CheckDelayedUsers {
+			affected, err := q.userRepository.UpdateDelayedUsers()
+			if err != nil {
+				fmt.Println(err)
+			} else {
+				fmt.Printf("Users with delayed PENDING: %d, status updated to WAITING.\n", affected)
+				q.cronJob.CheckDelayedUsers = false
+			}
+		}
+
 	}
 }
 

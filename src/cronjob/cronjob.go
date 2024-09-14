@@ -3,14 +3,18 @@ package cronjob
 import (
 	"context"
 	"fmt"
-	"spl-users/src/service"
 	"time"
 
 	"github.com/robfig/cron/v3"
 	"go.uber.org/fx"
 )
 
-func NewUserDelayedCron(lc fx.Lifecycle, userService *service.UserService) *cron.Cron {
+type CronJob struct {
+	CheckDelayedUsers bool
+	cron              *cron.Cron
+}
+
+func NewUserDelayedCron(lc fx.Lifecycle) *CronJob {
 	c := cron.New()
 
 	lc.Append(fx.Hook{
@@ -26,17 +30,14 @@ func NewUserDelayedCron(lc fx.Lifecycle, userService *service.UserService) *cron
 		},
 	})
 
-	return c
+	return &CronJob{CheckDelayedUsers: false, cron: c}
 }
 
-func RegisterUserDelayedCronJobs(c *cron.Cron, userService *service.UserService) {
-	_, err := c.AddFunc("*/5 * * * *", func() {
-		err := userService.CheckDelayedUsers()
-		if err != nil {
-			fmt.Printf("Error checking delayed users: %v", err)
-		}
+func RegisterUserDelayedCronJobs(c *CronJob) {
+	_, err := c.cron.AddFunc("*/2 * * * *", func() {
+		c.CheckDelayedUsers = true
 	})
 	if err != nil {
-		fmt.Printf("Error adding cron job: %v", err)
+		fmt.Printf("Error adding cron job: %v\n", err)
 	}
 }

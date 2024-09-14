@@ -8,7 +8,6 @@ type QueueUsersStatistics struct {
 }
 
 type Details struct {
-	Found     int `json:"found"`
-	NotFound  int `json:"notFound"`
-	WithError int `json:"withError"`
+	Found    int `json:"found"`
+	NotFound int `json:"notFound"`
 }
