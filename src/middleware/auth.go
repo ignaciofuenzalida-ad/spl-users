@@ -3,7 +3,7 @@ package middleware
 import (
 	"spl-users/src/config"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 type AuthMiddleware struct {
@@ -14,7 +14,7 @@ func NewAuthMiddleware(config *config.EnvironmentConfig) *AuthMiddleware {
 	return &AuthMiddleware{config: config}
 }
 
-func (u *AuthMiddleware) ValidateAuthHeader(c *fiber.Ctx) error {
+func (u *AuthMiddleware) ValidateAuthHeader(c fiber.Ctx) error {
 	headerValue := c.Get("X-Auth-Token")
 
 	if headerValue == "" || u.config.AuthString != headerValue {

@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 type UserController struct {
@@ -24,7 +24,7 @@ func NewUserController(userService *service.UserService) *UserController {
 	}
 }
 
-func (u *UserController) GetUsers(c *fiber.Ctx) error {
+func (u *UserController) GetUsers(c fiber.Ctx) error {
 	queryParams := c.Queries()
 	search := queryParams["search"]
 	limitStr := queryParams["limit"]
@@ -53,7 +53,7 @@ func (u *UserController) GetUsers(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"data": users})
 }
 
-func (u *UserController) GetUserByRun(c *fiber.Ctx) error {
+func (u *UserController) GetUserByRun(c fiber.Ctx) error {
 	runStr := c.Params("run")
 	run, err := strconv.Atoi(runStr)
 	if err != nil {
@@ -74,13 +74,13 @@ func (u *UserController) GetUserByRun(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"data": user})
 }
 
-func (u *UserController) GetRandomUsers(c *fiber.Ctx) error {
+func (u *UserController) GetRandomUsers(c fiber.Ctx) error {
 	runs := u.userService.GetRandomUsers()
 
 	return c.JSON(fiber.Map{"data": runs})
 }
 
-func (u *UserController) UpdateOrCreateUserByRun(c *fiber.Ctx) error {
+func (u *UserController) UpdateOrCreateUserByRun(c fiber.Ctx) error {
 	// Validate if Run is valid and exist
 	runStr := c.Params("run")
 	run, err := strconv.Atoi(runStr)
@@ -101,7 +101,7 @@ func (u *UserController) UpdateOrCreateUserByRun(c *fiber.Ctx) error {
 
 	// Validate request body
 	var userRequest dto.UpdateUserDto
-	if err := c.BodyParser(&userRequest); err != nil {
+	if err := c.Bind().Body(&userRequest); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
 		})
@@ -121,7 +121,7 @@ func (u *UserController) UpdateOrCreateUserByRun(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusOK)
 }
 
-func (u *UserController) GetQueueUsersStatistics(c *fiber.Ctx) error {
+func (u *UserController) GetQueueUsersStatistics(c fiber.Ctx) error {
 	data, err := u.userService.GetQueueUsersStatistics()
 	if err != nil {
 		return helpers.InternalError(c, err)

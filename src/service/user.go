@@ -3,31 +3,26 @@ package service
 import (
 	"fmt"
 	"spl-users/ent"
+	"spl-users/ent/schema"
 	"spl-users/src/config"
 	"spl-users/src/dto"
 	"spl-users/src/model"
-	"spl-users/src/queue"
 	"spl-users/src/repository"
+	"time"
 )
 
 type UserService struct {
-	userRepository  *repository.UserRepository
-	config          *config.EnvironmentConfig
-	runsQueue       *queue.Queue[string]
-	userUpdateQueue *queue.Queue[dto.UpdateUserDto]
+	userRepository *repository.UserRepository
+	config         *config.EnvironmentConfig
 }
 
 func NewUserService(
 	userRepository *repository.UserRepository,
 	config *config.EnvironmentConfig,
-	runsQueue *queue.Queue[string],
-	userUpdateQueue *queue.Queue[dto.UpdateUserDto],
 ) *UserService {
 	return &UserService{
-		userRepository:  userRepository,
-		config:          config,
-		runsQueue:       runsQueue,
-		userUpdateQueue: userUpdateQueue,
+		userRepository: userRepository,
+		config:         config,
 	}
 }
 
@@ -57,30 +52,58 @@ func (u *UserService) GetUserQueueByRun(run int) (*ent.UserQueue, error) {
 }
 
 func (u *UserService) GetRandomUsers() *[]string {
-	return u.runsQueue.PopMany(u.config.DefaultRandomUsers)
+	runs, err := u.userRepository.GetRandomUsers(u.config.DefaultRandomUsers)
+	if err != nil {
+		return nil
+	}
+	return runs
 }
 
-func (u *UserService) PushRandomUsers() error {
-	for {
+// DEPRECATED
+// func (u *UserService) PushRandomUsers() error {
+// 	for {
 
-		totalElements := len(u.runsQueue.Values)
-		if totalElements >= u.config.DefaultRandomUsersQueueSize {
-			fmt.Printf("Good total elements: %d\n", totalElements)
-			continue
-		}
-		fmt.Printf("Queue is below limit: %d, fetching more random users...\n", totalElements)
-		runs, err := u.userRepository.GetRandomUsers(u.config.DefaultRandomUsersQueueSize)
+// 		totalElements := len(u.runsQueue.Values)
+// 		if totalElements >= u.config.DefaultRandomUsersQueueSize {
+// 			fmt.Printf("Good total elements: %d\n", totalElements)
+// 			continue
+// 		}
+// 		fmt.Printf("Queue is below limit: %d, fetching more random users...\n", totalElements)
+// 		runs, err := u.userRepository.GetRandomUsers(u.config.DefaultRandomUsersQueueSize)
+// 		if err != nil {
+// 			return err
+// 		}
+
+// 		u.runsQueue.PushMany(*runs)
+// 	}
+// }
+
+func (u *UserService) UpdateOrCreateUser(run int, data dto.UpdateUserDto) error {
+	if data.FetchStatus == string(schema.ERROR) {
+		err := u.userRepository.SetUserQueueError(data.Run)
 		if err != nil {
 			return err
 		}
-
-		u.runsQueue.PushMany(runs)
+		return nil
 	}
-}
 
-func (u *UserService) UpdateOrCreateUser(run int, data dto.UpdateUserDto) error {
-	data.Run = run
-	u.userUpdateQueue.Push(data)
+	if data.Status == string(schema.NOT_FOUND) {
+		err := u.userRepository.SetUserQueueNotFound(data.Run)
+		if err != nil {
+			return err
+		}
+		return nil
+
+	}
+
+	if data.Gender == "" {
+		data.Gender = string(schema.UNKNOWN)
+	}
+
+	err := u.userRepository.UpdateOrCreateUser(data.Run, data)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -94,12 +117,15 @@ func (u *UserService) GetQueueUsersStatistics() (*model.QueueUsersStatistics, er
 	return data, nil
 }
 
-func (u *UserService) CheckDelayedUsers() error {
-	affected, err := u.userRepository.UpdateDelayedUsers()
-	if err != nil {
-		return err
-	}
-	fmt.Printf("Users with delayed PENDING: %d, status updated to WAITING.\n", affected)
+func (u *UserService) CheckDelayedUsers() {
+	for {
+		affected, err := u.userRepository.UpdateDelayedUsers(u.config.DelayedUsersCronMinutes)
+		if err != nil {
+			fmt.Printf("Error during Delayed Users Cron: %s\n", err)
+		}
 
-	return nil
+		fmt.Printf("[CRON] Users with delayed PENDING: %d, status updated to WAITING.\n", affected)
+		time.Sleep(time.Minute * time.Duration(u.config.DelayedUsersCronMinutes))
+	}
+
 }

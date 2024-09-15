@@ -4,18 +4,17 @@ import (
 	"fmt"
 	"spl-users/ent/schema"
 	"spl-users/src/config"
-	"spl-users/src/cronjob"
 	"spl-users/src/dto"
 	"spl-users/src/queue"
 	"spl-users/src/repository"
 )
 
+// DEPRECATED
 type QueueService struct {
 	userRepository  *repository.UserRepository
 	config          *config.EnvironmentConfig
 	runsQueue       *queue.Queue[string]
 	userUpdateQueue *queue.Queue[dto.UpdateUserDto]
-	cronJob         *cronjob.CronJob
 }
 
 func NewQueueService(
@@ -23,31 +22,29 @@ func NewQueueService(
 	config *config.EnvironmentConfig,
 	runsQueue *queue.Queue[string],
 	userUpdateQueue *queue.Queue[dto.UpdateUserDto],
-	cronJob *cronjob.CronJob,
 ) *QueueService {
 	return &QueueService{
 		userRepository:  userRepository,
 		config:          config,
 		runsQueue:       runsQueue,
 		userUpdateQueue: userUpdateQueue,
-		cronJob:         cronJob,
 	}
 }
 
 func (q *QueueService) Run() {
 	for {
 		// RunsQueue
-		totalElements := len(q.runsQueue.Values)
-		if totalElements < q.config.DefaultRandomUsersQueueSize {
-			fmt.Printf("Queue is below limit: %d, fetching more random users...\n", totalElements)
-			runs, err := q.userRepository.GetRandomUsers(q.config.DefaultRandomUsersQueueSize)
-			if err != nil {
-				fmt.Printf("Error during RandomUsersQueue: %s\n", err)
-			} else {
-				q.runsQueue.PushMany(runs)
-				fmt.Printf("Queue updated, total elements: %d \n", totalElements)
-			}
-		}
+		// totalElements := len(q.runsQueue.Values)
+		// if totalElements < q.config.DefaultRandomUsersQueueSize {
+		// 	fmt.Printf("Queue is below limit: %d, fetching more random users...\n", totalElements)
+		// 	runs, err := q.userRepository.GetRandomUsers(q.config.DefaultRandomUsersQueueSize)
+		// 	if err != nil {
+		// 		fmt.Printf("Error during RandomUsersQueue: %s\n", err)
+		// 	} else {
+		// 		q.runsQueue.PushMany(*runs)
+		// 		fmt.Printf("Queue updated, total elements: %d \n", totalElements)
+		// 	}
+		// }
 
 		// UpdateOrCreateUserQueue
 		if len(q.userUpdateQueue.Values) > 0 {
@@ -58,15 +55,15 @@ func (q *QueueService) Run() {
 		}
 
 		// Delayed Users
-		if q.cronJob.CheckDelayedUsers {
-			affected, err := q.userRepository.UpdateDelayedUsers()
-			if err != nil {
-				fmt.Printf("Error during Delayed Users: %s\n", err)
-			} else {
-				fmt.Printf("Users with delayed PENDING: %d, status updated to WAITING.\n", affected)
-				q.cronJob.CheckDelayedUsers = false
-			}
-		}
+		// if q.cronJob.CheckDelayedUsers {
+		// 	affected, err := q.userRepository.UpdateDelayedUsers()
+		// 	if err != nil {
+		// 		fmt.Printf("Error during Delayed Users: %s\n", err)
+		// 	} else {
+		// 		fmt.Printf("Users with delayed PENDING: %d, status updated to WAITING.\n", affected)
+		// 		q.cronJob.CheckDelayedUsers = false
+		// 	}
+		// }
 
 	}
 }

@@ -12,10 +12,10 @@ import (
 )
 
 type EnvironmentConfig struct {
-	AuthString                  string `env:"AUTH_STRING,required"`
-	DefaultRandomUsers          int    `env:"DEFAULT_RANDOM_USERS,required"`
-	DefaultRandomUsersQueueSize int    `env:"DEFAULT_RANDOM_USERS_QUEUE_SIZE"`
-	DebugMode                   bool   `env:"DEBUG_MODE"`
+	AuthString              string `env:"AUTH_STRING,required"`
+	DefaultRandomUsers      int    `env:"DEFAULT_RANDOM_USERS,required"`
+	DebugMode               bool   `env:"DEBUG_MODE"`
+	DelayedUsersCronMinutes int    `env:"DELAYED_USERS_CRON_MINUTES,required"`
 }
 
 var envConfig *EnvironmentConfig
@@ -45,24 +45,25 @@ func NewEnviromentConfig(lc fx.Lifecycle) *EnvironmentConfig {
 	// DefaultRandomUsers
 	defaultRandomUsersStr := os.Getenv("DEFAULT_RANDOM_USERS")
 	if defaultRandomUsersStr == "" {
-		defaultRandomUsersStr = "10"
+		defaultRandomUsersStr = "20"
 	}
 	defaultRandomUsers, err := strconv.Atoi(defaultRandomUsersStr)
 	if err != nil {
 		panic(err)
 	}
+
 	envConfig.DefaultRandomUsers = defaultRandomUsers
 
-	// DefaultRandomUsersQueueSize
-	defaultRandomUsersQueueSizeStr := os.Getenv("DEFAULT_RANDOM_USERS_QUEUE_SIZE")
-	if defaultRandomUsersQueueSizeStr == "" {
-		defaultRandomUsersQueueSizeStr = "500"
+	// DelayedUsersCronMinutes
+	delayedUsersCronMinutesStr := os.Getenv("DELAYED_USERS_CRON_MINUTES")
+	if delayedUsersCronMinutesStr == "" {
+		delayedUsersCronMinutesStr = "5"
 	}
-	defaultRandomUsersQueueSize, err := strconv.Atoi(defaultRandomUsersQueueSizeStr)
+	delayedUsersCronMinutes, err := strconv.Atoi(delayedUsersCronMinutesStr)
 	if err != nil {
 		panic(err)
 	}
-	envConfig.DefaultRandomUsersQueueSize = defaultRandomUsersQueueSize
+	envConfig.DelayedUsersCronMinutes = delayedUsersCronMinutes
 
 	lc.Append(fx.Hook{
 		OnStart: func(context.Context) error {

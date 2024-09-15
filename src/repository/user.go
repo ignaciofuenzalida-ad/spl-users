@@ -11,6 +11,7 @@ import (
 	"spl-users/ent/userqueue"
 	"spl-users/src/dto"
 	"spl-users/src/model"
+	"sync"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
@@ -20,6 +21,7 @@ type UserRepository struct {
 	conn               *ent.Client
 	ctx                *context.Context
 	locationRepository *LocationRepository
+	lock               *sync.Mutex
 }
 
 func NewUserRepository(
@@ -31,6 +33,7 @@ func NewUserRepository(
 		conn:               conn,
 		ctx:                ctx,
 		locationRepository: locationRepository,
+		lock:               &sync.Mutex{},
 	}
 }
 
@@ -104,7 +107,10 @@ func (u *UserRepository) GetUserQueueByRun(run int) (*ent.UserQueue, error) {
 	return user, nil
 }
 
-func (u *UserRepository) GetRandomUsers(limit int) ([]string, error) {
+func (u *UserRepository) GetRandomUsers(limit int) (*[]string, error) {
+	u.lock.Lock()
+	defer u.lock.Unlock()
+
 	tx, err := u.conn.Tx(*u.ctx)
 	if err != nil {
 		return nil, err
@@ -144,10 +150,13 @@ func (u *UserRepository) GetRandomUsers(limit int) ([]string, error) {
 
 	tx.Commit()
 
-	return userIdentifiers, nil
+	return &userIdentifiers, nil
 }
 
 func (u *UserRepository) SetUserQueueError(run int) error {
+	u.lock.Lock()
+	defer u.lock.Unlock()
+
 	_, err := u.conn.UserQueue.Update().
 		Where(userqueue.RunEQ(run)).
 		SetFetchStatus(userqueue.FetchStatus(schema.ERROR)).
@@ -160,6 +169,9 @@ func (u *UserRepository) SetUserQueueError(run int) error {
 }
 
 func (u *UserRepository) SetUserQueueNotFound(run int) error {
+	u.lock.Lock()
+	defer u.lock.Unlock()
+
 	_, err := u.conn.UserQueue.Update().
 		Where(userqueue.RunEQ(run)).
 		SetStatus(userqueue.Status(schema.NOT_FOUND)).
@@ -173,6 +185,9 @@ func (u *UserRepository) SetUserQueueNotFound(run int) error {
 }
 
 func (u *UserRepository) UpdateOrCreateUser(run int, data dto.UpdateUserDto) error {
+	u.lock.Lock()
+	defer u.lock.Unlock()
+
 	tx, err := u.conn.Tx(*u.ctx)
 	if err != nil {
 		return err
@@ -349,14 +364,17 @@ func (u *UserRepository) GetQueueUsersStatistics() (*model.QueueUsersStatistics,
 
 }
 
-func (u *UserRepository) UpdateDelayedUsers() (int, error) {
-	fiveMinutesAgo := time.Now().Add(-1 * time.Minute * 5)
+func (u *UserRepository) UpdateDelayedUsers(minutes int) (int, error) {
+	u.lock.Lock()
+	defer u.lock.Unlock()
+
+	minutesAgo := time.Now().Add(-1 * time.Minute * time.Duration(minutes))
 
 	result, err := u.conn.UserQueue.
 		Update().
 		Where(
 			userqueue.FetchStatusEQ(userqueue.FetchStatusPENDING),
-			userqueue.UpdatedAtLTE(fiveMinutesAgo),
+			userqueue.UpdatedAtLTE(minutesAgo),
 		).
 		SetFetchStatus(userqueue.FetchStatusWAITING).
 		Save(*u.ctx)
