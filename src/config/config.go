@@ -45,7 +45,7 @@ func NewEnviromentConfig(lc fx.Lifecycle) *EnvironmentConfig {
 	// DefaultRandomUsers
 	defaultRandomUsersStr := os.Getenv("DEFAULT_RANDOM_USERS")
 	if defaultRandomUsersStr == "" {
-		defaultRandomUsersStr = "20"
+		defaultRandomUsersStr = "50"
 	}
 	defaultRandomUsers, err := strconv.Atoi(defaultRandomUsersStr)
 	if err != nil {

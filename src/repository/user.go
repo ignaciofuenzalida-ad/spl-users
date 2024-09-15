@@ -13,8 +13,6 @@ import (
 	"spl-users/src/model"
 	"sync"
 	"time"
-
-	"entgo.io/ent/dialect/sql"
 )
 
 type UserRepository struct {
@@ -115,11 +113,10 @@ func (u *UserRepository) GetRandomUsers(limit int) (*[]string, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	users, err := tx.UserQueue.Query().
 		Where(userqueue.StatusEQ(userqueue.Status(schema.EMPTY))).
 		Where(userqueue.FetchStatusEQ(userqueue.FetchStatus(schema.WAITING))).
-		Order(sql.OrderByRand()).
+		Order(ent.Desc(user.FieldRun)).
 		Limit(limit).
 		All(*u.ctx)
 
