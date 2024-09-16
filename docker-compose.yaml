@@ -1,5 +1,5 @@
 services:
-    spl-users:
+    app:
         build:
             context: .
             dockerfile: Dockerfile
@@ -8,12 +8,6 @@ services:
         volumes:
             - db-data:/app/database
         network_mode: host
-        deploy:
-            resources:
-                limits:
-                    cpus: '4.0'
-                reservations:
-                    cpus: '1.0'
 
 volumes:
     db-data:

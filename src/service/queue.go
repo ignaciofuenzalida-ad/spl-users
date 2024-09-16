@@ -1,8 +1,6 @@
 package service
 
 import (
-	"fmt"
-	"spl-users/ent/schema"
 	"spl-users/src/config"
 	"spl-users/src/dto"
 	"spl-users/src/queue"
@@ -47,12 +45,12 @@ func (q *QueueService) Run() {
 		// }
 
 		// UpdateOrCreateUserQueue
-		if len(q.userUpdateQueue.Values) > 0 {
-			err := q.UpdateOrCreateUser()
-			if err != nil {
-				fmt.Printf("Error during UsersQueue: %s\n", err)
-			}
-		}
+		// if len(q.userUpdateQueue.Values) > 0 {
+		// 	err := q.UpdateOrCreateUser()
+		// 	if err != nil {
+		// 		fmt.Printf("Error during UsersQueue: %s\n", err)
+		// 	}
+		// }
 
 		// Delayed Users
 		// if q.cronJob.CheckDelayedUsers {
@@ -68,35 +66,35 @@ func (q *QueueService) Run() {
 	}
 }
 
-func (q *QueueService) UpdateOrCreateUser() error {
-	data := q.userUpdateQueue.Pop()
+// func (q *QueueService) UpdateOrCreateUser() error {
+// 	data := q.userUpdateQueue.Pop()
 
-	if data.FetchStatus == string(schema.ERROR) {
-		err := q.userRepository.SetUserQueueError(data.Run)
-		if err != nil {
-			return err
-		}
-		return nil
-	}
+// 	if data.FetchStatus == string(schema.ERROR) {
+// 		err := q.userRepository.SetUserQueueError(data.Run)
+// 		if err != nil {
+// 			return err
+// 		}
+// 		return nil
+// 	}
 
-	if data.Status == string(schema.NOT_FOUND) {
-		err := q.userRepository.SetUserQueueNotFound(data.Run)
-		if err != nil {
-			return err
-		}
-		return nil
+// 	if data.Status == string(schema.NOT_FOUND) {
+// 		err := q.userRepository.SetUserQueueNotFound(data.Run)
+// 		if err != nil {
+// 			return err
+// 		}
+// 		return nil
 
-	}
+// 	}
 
-	if data.Gender == "" {
-		data.Gender = string(schema.UNKNOWN)
-	}
+// 	if data.Gender == "" {
+// 		data.Gender = string(schema.UNKNOWN)
+// 	}
 
-	err := q.userRepository.UpdateOrCreateUser(data.Run, *data)
-	if err != nil {
-		return err
-	}
+// 	err := q.userRepository.UpdateOrCreateUser(data.Run, *data)
+// 	if err != nil {
+// 		return err
+// 	}
 
-	return nil
+// 	return nil
 
-}
+// }

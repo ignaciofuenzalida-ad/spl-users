@@ -80,7 +80,7 @@ func (u *UserService) GetRandomUsers() *[]string {
 
 func (u *UserService) UpdateOrCreateUser(run int, data dto.UpdateUserDto) error {
 	if data.FetchStatus == string(schema.ERROR) {
-		err := u.userRepository.SetUserQueueError(data.Run)
+		err := u.userRepository.SetUserQueueError(run)
 		if err != nil {
 			return err
 		}
@@ -88,7 +88,7 @@ func (u *UserService) UpdateOrCreateUser(run int, data dto.UpdateUserDto) error 
 	}
 
 	if data.Status == string(schema.NOT_FOUND) {
-		err := u.userRepository.SetUserQueueNotFound(data.Run)
+		err := u.userRepository.SetUserQueueNotFound(run)
 		if err != nil {
 			return err
 		}
@@ -100,7 +100,7 @@ func (u *UserService) UpdateOrCreateUser(run int, data dto.UpdateUserDto) error 
 		data.Gender = string(schema.UNKNOWN)
 	}
 
-	err := u.userRepository.UpdateOrCreateUser(data.Run, data)
+	err := u.userRepository.UpdateOrCreateUser(run, data)
 	if err != nil {
 		return err
 	}

@@ -3,7 +3,6 @@ package dto
 import "time"
 
 type UpdateUserDto struct {
-	Run             int
 	FetchStatus     string    `json:"fetchStatus" validate:"required,oneof=COMPLETED ERROR"`
 	Status          string    `json:"status" validate:"omitempty,oneof=NOT_FOUND FOUND"`
 	FirstName       string    `json:"firstName" validate:"omitempty"`

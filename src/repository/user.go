@@ -275,44 +275,36 @@ func (u *UserRepository) UpdateOrCreateUser(run int, data dto.UpdateUserDto) err
 }
 
 func (u *UserRepository) GetQueueUsersStatistics() (*model.QueueUsersStatistics, error) {
-	tx, err := u.conn.Tx(*u.ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	// General Statistics
-	totalFound, err := tx.User.
+	totalFound, err := u.conn.User.
 		Query().
 		Count(*u.ctx)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
-	totalNotFound, err := tx.UserQueue.
+	totalNotFound, err := u.conn.UserQueue.
 		Query().
 		Where(userqueue.StatusEQ(userqueue.StatusNOT_FOUND)).
 		Count(*u.ctx)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
 	// Last Hour Statistics
 	oneHourAgo := time.Now().Add(-1 * time.Hour)
 
-	totalFound1Hr, err := tx.User.
+	totalFound1Hr, err := u.conn.User.
 		Query().
 		Where(
 			user.CreatedAtGTE(oneHourAgo),
 		).
 		Count(*u.ctx)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
-	totalNotFound1Hr, err := tx.UserQueue.
+	totalNotFound1Hr, err := u.conn.UserQueue.
 		Query().
 		Where(
 			userqueue.StatusEQ(userqueue.StatusNOT_FOUND),
@@ -320,29 +312,24 @@ func (u *UserRepository) GetQueueUsersStatistics() (*model.QueueUsersStatistics,
 		).
 		Count(*u.ctx)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
 	// Total Waiting
-	totalWaiting, err := tx.UserQueue.
+	totalWaiting, err := u.conn.UserQueue.
 		Query().
 		Where(userqueue.FetchStatusEQ(userqueue.FetchStatusWAITING)).
 		Count(*u.ctx)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
-	total, err := tx.UserQueue.
+	total, err := u.conn.UserQueue.
 		Query().
 		Count(*u.ctx)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
-
-	tx.Commit()
 
 	statistics := &model.QueueUsersStatistics{
 		General: model.Details{
