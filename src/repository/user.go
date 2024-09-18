@@ -11,6 +11,7 @@ import (
 	"spl-users/ent/userqueue"
 	"spl-users/src/dto"
 	"spl-users/src/model"
+	"strings"
 	"sync"
 	"time"
 )
@@ -40,11 +41,16 @@ func (u *UserRepository) GetUsersBySearch(
 	limit int,
 	locations []string,
 ) ([]*model.UserSearch, error) {
-	predicates := []predicate.User{
-		user.Or(
-			user.FirstNameContainsFold(search),
-			user.LastNameContainsFold(search),
-		),
+	searchTerms := strings.Fields(search)
+
+	var predicates []predicate.User
+	for _, term := range searchTerms {
+		predicates = append(predicates,
+			user.Or(
+				user.FirstNameContainsFold(term),
+				user.LastNameContainsFold(term),
+			),
+		)
 	}
 
 	if len(locations) > 0 {

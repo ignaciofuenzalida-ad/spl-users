@@ -14,7 +14,7 @@ func CreateSqliteConnection(lc fx.Lifecycle, envConfig *config.EnvironmentConfig
 	if envConfig.DebugMode {
 		options = append(options, ent.Debug())
 	}
-	conn, connError := ent.Open("sqlite3", "file:./database/sportlife.db?_fk=1", options...)
+	conn, connError := ent.Open("sqlite3", "file:./database/sportlife.db?_fk=1&_journal_mode=WAL", options...)
 	// Run the auto migration tool.
 	migrationError := conn.Schema.Create(*ctx)
 
