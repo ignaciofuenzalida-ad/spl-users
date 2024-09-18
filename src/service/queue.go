@@ -1,67 +1,47 @@
 package service
 
 import (
+	"fmt"
 	"spl-users/src/config"
-	"spl-users/src/dto"
 	"spl-users/src/queue"
 	"spl-users/src/repository"
+	"time"
 )
 
-// DEPRECATED
 type QueueService struct {
-	userRepository  *repository.UserRepository
-	config          *config.EnvironmentConfig
-	runsQueue       *queue.Queue[string]
-	userUpdateQueue *queue.Queue[dto.UpdateUserDto]
+	userRepository *repository.UserRepository
+	config         *config.EnvironmentConfig
+	runsQueue      *queue.MapQueue[string]
 }
 
 func NewQueueService(
 	userRepository *repository.UserRepository,
 	config *config.EnvironmentConfig,
-	runsQueue *queue.Queue[string],
-	userUpdateQueue *queue.Queue[dto.UpdateUserDto],
+	runsQueue *queue.MapQueue[string],
 ) *QueueService {
 	return &QueueService{
-		userRepository:  userRepository,
-		config:          config,
-		runsQueue:       runsQueue,
-		userUpdateQueue: userUpdateQueue,
+		userRepository: userRepository,
+		config:         config,
+		runsQueue:      runsQueue,
 	}
 }
 
 func (q *QueueService) Run() {
 	for {
 		// RunsQueue
-		// totalElements := len(q.runsQueue.Values)
-		// if totalElements < q.config.DefaultRandomUsersQueueSize {
-		// 	fmt.Printf("Queue is below limit: %d, fetching more random users...\n", totalElements)
-		// 	runs, err := q.userRepository.GetRandomUsers(q.config.DefaultRandomUsersQueueSize)
-		// 	if err != nil {
-		// 		fmt.Printf("Error during RandomUsersQueue: %s\n", err)
-		// 	} else {
-		// 		q.runsQueue.PushMany(*runs)
-		// 		fmt.Printf("Queue updated, total elements: %d \n", totalElements)
-		// 	}
-		// }
+		totalElements := len(q.runsQueue.Values)
+		if totalElements < q.config.DefaultRandomUsers*20 {
+			fmt.Printf("[QUEUE] Below limits: %d, fetching more users...\n", totalElements)
+			runs, err := q.userRepository.GetRandomUsers(q.config.DefaultRandomUsers * 20)
+			if err != nil {
+				fmt.Printf("[QUEUE] Error during users query: %s\n", err)
+			}
 
-		// UpdateOrCreateUserQueue
-		// if len(q.userUpdateQueue.Values) > 0 {
-		// 	err := q.UpdateOrCreateUser()
-		// 	if err != nil {
-		// 		fmt.Printf("Error during UsersQueue: %s\n", err)
-		// 	}
-		// }
+			q.runsQueue.PushMany(*runs)
 
-		// Delayed Users
-		// if q.cronJob.CheckDelayedUsers {
-		// 	affected, err := q.userRepository.UpdateDelayedUsers()
-		// 	if err != nil {
-		// 		fmt.Printf("Error during Delayed Users: %s\n", err)
-		// 	} else {
-		// 		fmt.Printf("Users with delayed PENDING: %d, status updated to WAITING.\n", affected)
-		// 		q.cronJob.CheckDelayedUsers = false
-		// 	}
-		// }
+		} else {
+			time.Sleep(5 * time.Second)
+		}
 
 	}
 }

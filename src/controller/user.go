@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"spl-users/ent/schema"
 	"spl-users/src/dto"
 	"spl-users/src/helpers"
 	"spl-users/src/service"
@@ -111,6 +112,10 @@ func (u *UserController) UpdateOrCreateUserByRun(c fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": err.Error(),
 		})
+	}
+
+	if userRequest.Gender == "" {
+		userRequest.Gender = string(schema.UNKNOWN)
 	}
 
 	err = u.userService.UpdateOrCreateUser(run, userRequest)

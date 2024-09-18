@@ -7,6 +7,7 @@ import (
 	"spl-users/src/config"
 	"spl-users/src/dto"
 	"spl-users/src/model"
+	"spl-users/src/queue"
 	"spl-users/src/repository"
 	"time"
 )
@@ -14,15 +15,18 @@ import (
 type UserService struct {
 	userRepository *repository.UserRepository
 	config         *config.EnvironmentConfig
+	runsQueue      *queue.MapQueue[string]
 }
 
 func NewUserService(
 	userRepository *repository.UserRepository,
 	config *config.EnvironmentConfig,
+	runsQueue *queue.MapQueue[string],
 ) *UserService {
 	return &UserService{
 		userRepository: userRepository,
 		config:         config,
+		runsQueue:      runsQueue,
 	}
 }
 
@@ -52,11 +56,7 @@ func (u *UserService) GetUserQueueByRun(run int) (*ent.UserQueue, error) {
 }
 
 func (u *UserService) GetRandomUsers() *[]string {
-	runs, err := u.userRepository.GetRandomUsers(u.config.DefaultRandomUsers)
-	if err != nil {
-		return nil
-	}
-	return runs
+	return u.runsQueue.PopMany(u.config.DefaultRandomUsers)
 }
 
 // DEPRECATED
@@ -79,32 +79,27 @@ func (u *UserService) GetRandomUsers() *[]string {
 // }
 
 func (u *UserService) UpdateOrCreateUser(run int, data dto.UpdateUserDto) error {
-	if data.FetchStatus == string(schema.ERROR) {
-		err := u.userRepository.SetUserQueueError(run)
-		if err != nil {
-			return err
-		}
-		return nil
-	}
 
 	if data.Status == string(schema.NOT_FOUND) {
 		err := u.userRepository.SetUserQueueNotFound(run)
 		if err != nil {
 			return err
 		}
-		return nil
-
 	}
 
-	if data.Gender == "" {
-		data.Gender = string(schema.UNKNOWN)
+	if data.Status == string(schema.FOUND) {
+		err := u.userRepository.UpdateOrCreateUser(run, data)
+		if err != nil {
+			return err
+		}
 	}
 
-	err := u.userRepository.UpdateOrCreateUser(run, data)
+	qUser, err := u.userRepository.GetUserQueueByRun(run)
 	if err != nil {
 		return err
 	}
 
+	u.runsQueue.Remove(fmt.Sprintf("%d-%s", qUser.Run, qUser.VerificationDigit))
 	return nil
 }
 

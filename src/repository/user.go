@@ -106,46 +106,23 @@ func (u *UserRepository) GetUserQueueByRun(run int) (*ent.UserQueue, error) {
 }
 
 func (u *UserRepository) GetRandomUsers(limit int) (*[]string, error) {
-	u.lock.Lock()
-	defer u.lock.Unlock()
-
-	tx, err := u.conn.Tx(*u.ctx)
-	if err != nil {
-		return nil, err
-	}
-	users, err := tx.UserQueue.Query().
-		Where(userqueue.StatusEQ(userqueue.Status(schema.EMPTY))).
-		Where(userqueue.FetchStatusEQ(userqueue.FetchStatus(schema.WAITING))).
+	users, err := u.conn.UserQueue.Query().
+		Where(userqueue.StatusEQ(userqueue.StatusEMPTY)).
 		Order(ent.Desc(user.FieldRun)).
 		Limit(limit).
 		All(*u.ctx)
 
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
 	var userIdentifiers []string
-	var usersRun []int
 	for _, user := range users {
 		userIdentifiers = append(
 			userIdentifiers,
 			fmt.Sprintf("%d-%s", user.Run, user.VerificationDigit),
 		)
-		usersRun = append(usersRun, user.Run)
 	}
-
-	_, err = tx.UserQueue.Update().
-		Where(userqueue.RunIn(usersRun...)).
-		SetFetchStatus(userqueue.FetchStatus(schema.PENDING)).
-		Save(*u.ctx)
-
-	if err != nil {
-		tx.Rollback()
-		return nil, err
-	}
-
-	tx.Commit()
 
 	return &userIdentifiers, nil
 }
