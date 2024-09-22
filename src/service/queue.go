@@ -30,7 +30,7 @@ func (q *QueueService) Run() {
 	for {
 		// RunsQueue
 		totalElements := len(q.runsQueue.Values)
-		if totalElements < q.config.DefaultRandomUsers*20 {
+		if totalElements < q.config.DefaultRandomUsers*30 {
 			fmt.Printf("[QUEUE] Below limits: %d, fetching more users...\n", totalElements)
 			runs, err := q.userRepository.GetRandomUsers(q.config.DefaultRandomUsers * 20)
 			if err != nil {
@@ -40,7 +40,8 @@ func (q *QueueService) Run() {
 			q.runsQueue.PushMany(*runs)
 
 		} else {
-			time.Sleep(5 * time.Second)
+			fmt.Printf("[QUEUE] Error during users query: \n")
+			time.Sleep(2 * time.Second)
 		}
 
 	}
